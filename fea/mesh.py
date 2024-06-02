@@ -32,7 +32,7 @@ class Mesh:
             if val == 1:
                 s.update(key)
         nodes = np.array(object=list(s), dtype=np.int32)
-        return np.unique(a=nodes)
+        return np.unique(nodes)
 
     @staticmethod
     def grid_mesh(m: int, n: int, L: float = 1.0, H: float = 1.0) -> 'Mesh':

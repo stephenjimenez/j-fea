@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 
 from .material import Material
 from .mesh import Mesh
-import shape
+from .shape import Q4_GAUSS_POINTS, Q4_GAUSS_WEIGHTS, q4gradient, q4shape
 
 
 def rhs_vector(mesh: Mesh, b: NDArray[np.float64]) -> NDArray[np.float64]:
@@ -24,10 +24,10 @@ def rhs_vector(mesh: Mesh, b: NDArray[np.float64]) -> NDArray[np.float64]:
             f = np.zeros(shape=8, dtype=np.float64)
             x = mesh.coordinates[mesh.topology[i]]
             for j in range(4):
-                xi, eta = shape.Q4_GAUSS_POINTS[j]
-                w = shape.Q4_GAUSS_WEIGHTS[j]
-                dphi = shape.q4gradient(xi=xi, eta=eta)
-                phi = shape.q4shape(xi=xi, eta=eta)
+                xi, eta = Q4_GAUSS_POINTS[j]
+                w = Q4_GAUSS_WEIGHTS[j]
+                dphi = q4gradient(xi=xi, eta=eta)
+                phi = q4shape(xi=xi, eta=eta)
                 jac = dphi @ x
                 det = np.linalg.det(a=jac)
                 if det <= 0.0:
@@ -65,9 +65,9 @@ def stiffness_matrix(mesh: Mesh, material: Material,
         K = np.zeros(shape=(8, 8), dtype=np.float64)
         x = mesh.coordinates[mesh.topology[i]]
         for j in range(4):
-            xi, eta = shape.Q4_GAUSS_POINTS[j]
-            w = shape.Q4_GAUSS_WEIGHTS[j]
-            dphi = shape.q4gradient(xi=xi, eta=eta)
+            xi, eta = Q4_GAUSS_POINTS[j]
+            w = Q4_GAUSS_WEIGHTS[j]
+            dphi = q4gradient(xi=xi, eta=eta)
             jac = dphi @ x
             det = np.linalg.det(a=jac)
             if det <= 0.0:
@@ -75,15 +75,15 @@ def stiffness_matrix(mesh: Mesh, material: Material,
             dphi_dx = np.linalg.solve(a=jac, b=dphi)
             B = np.zeros(shape=(3, 8), dtype=np.float64)
             for k in range(4):
-                B[0, 2*k] = B[2, 2*k + 1] = dphi_dx[0, i]
-                B[1, 2*k + 1] = B[2, 2*k] = dphi_dx[1, i]
+                B[0, 2*k] = B[2, 2*k + 1] = dphi_dx[0, k]
+                B[1, 2*k + 1] = B[2, 2*k] = dphi_dx[1, k]
             K += w*(B.T @ D @ B)*det
 
         # pack the global stiffness matrix
         dofs = np.zeros(shape=8, dtype=np.int32)
         for j in range(4):
             dofs[2*j] = 2*mesh.topology[i, j]
-            dofs[2*j + 1] = 2*mesh.topology[i, j] - 1
+            dofs[2*j + 1] = 2*mesh.topology[i, j] + 1
         for j in range(8):
             for k in range(8):
                 K_global[dofs[j], dofs[k]] += K[j, k]
