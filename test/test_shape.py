@@ -37,3 +37,7 @@ class TestShape(unittest.TestCase):
         dphi = fea.shape.q4gradient(xi=xi, eta=eta)
         self.assertAlmostEqual(first=phi.sum(), second=1.0)
         self.assertTrue(np.allclose(a=dphi.sum(axis=1), b=0.0))
+
+
+if __name__ == '__main__':
+    unittest.main()
