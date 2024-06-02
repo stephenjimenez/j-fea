@@ -10,6 +10,41 @@ from .mesh import Mesh
 import shape
 
 
+def rhs_vector(mesh: Mesh, b: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Assemble the global right-hand side (RHS) vector."""
+
+    # iterate over all elements to populate global RHS vector
+    n_dofs = 2*mesh.n_nodes
+    f_global = np.zeros(shape=n_dofs, dtype=np.float64)
+    if np.count_nonzero(a=b) > 0:
+        for i in range(mesh.n_elements):
+
+            # construct RHS vector for element "i" by performing
+            # Gauss quadrature
+            f = np.zeros(shape=8, dtype=np.float64)
+            x = mesh.coordinates[mesh.topology[i]]
+            for j in range(4):
+                xi, eta = shape.Q4_GAUSS_POINTS[j]
+                w = shape.Q4_GAUSS_WEIGHTS[j]
+                dphi = shape.q4gradient(xi=xi, eta=eta)
+                phi = shape.q4shape(xi=xi, eta=eta)
+                jac = dphi @ x
+                det = np.linalg.det(a=jac)
+                if det <= 0.0:
+                    raise ValueError('Determinant of Jacobian is <= 0')
+                f[0:8:2] += w*phi*b[0]*det
+                f[1:8:2] += w*phi*b[1]*det
+
+            # pack the global RHS vector
+            dofs = np.zeros(shape=8, dtype=np.int32)
+            for j in range(4):
+                dofs[2*j] = 2*mesh.topology[i, j]
+                dofs[2*j + 1] = 2*mesh.topology[i, j] - 1
+            f_global[dofs] += f
+
+    return f_global
+
+
 def stiffness_matrix(mesh: Mesh, material: Material,
                      plane_stress: bool = True) -> NDArray[np.float64]:
     """Assemble the global stiffness matrix."""
@@ -20,7 +55,7 @@ def stiffness_matrix(mesh: Mesh, material: Material,
     else:
         D = material.plane_strain_matrix()
 
-    # loop over all elements to populate global stiffness matrix
+    # iterate over all elements to populate global stiffness matrix
     n_dofs = 2*mesh.n_nodes
     K_global = np.zeros(shape=(n_dofs, n_dofs), dtype=np.float64)
     for i in range(mesh.n_elements):
@@ -36,7 +71,7 @@ def stiffness_matrix(mesh: Mesh, material: Material,
             jac = dphi @ x
             det = np.linalg.det(a=jac)
             if det <= 0.0:
-                raise ValueError('Determinant of Jacobian is <= 0.0!')
+                raise ValueError('Determinant of Jacobian is <= 0')
             dphi_dx = np.linalg.solve(a=jac, b=dphi)
             B = np.zeros(shape=(3, 8), dtype=np.float64)
             for k in range(4):
