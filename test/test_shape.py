@@ -28,7 +28,7 @@ class TestShape(unittest.TestCase):
         self.assertAlmostEqual(first=(phi @ u), second=(2.0*xi - 3.3*eta))
         self.assertTrue(np.allclose(a=(dphi @ u), b=[2.0, -3.3]))
 
-    def test_partition_of_unit(self) -> None:
+    def test_partition_of_unity(self) -> None:
         """Ensure that the shape functions satisfy the partition of
         unity quality.
         """
